@@ -68,7 +68,7 @@ export function createSession(ip) {
   recent.push(Date.now());
   ipSessions.set(ip, recent);
   const id = randomBytes(16).toString('hex');
-  sessions.set(id, { ip, created: Date.now(), lastSeen: Date.now(), turns: 0, cost: 0, messages: [] });
+  sessions.set(id, { id, ip, created: Date.now(), lastSeen: Date.now(), turns: 0, cost: 0, messages: [] });
   return { id };
 }
 
