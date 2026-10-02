@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Receptionist Demo</title>
+<meta name="description" content="Chat with an AI receptionist for a heating and air company. It checks real availability, books, reschedules and cancels, and the database makes double-booking impossible.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%231A2530'/><rect x='7' y='9' width='18' height='4' rx='2' fill='%23E2A11A'/><rect x='7' y='16' width='11' height='4' rx='2' fill='white'/><rect x='7' y='23' width='14' height='2.5' rx='1.25' fill='white' opacity='.5'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css?v=3">
+</head>
+<body>
+<header class="top">
+  <div class="wrap top-row">
+    <span class="by">Demo by <strong>Frank A.</strong>, AI integration engineer</span>
+    <a class="hire" href="https://www.upwork.com/freelancers/~0170dd39761ac49004" target="_blank" rel="noopener">Hire me on Upwork</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="intro">
+    <h1>An AI receptionist that books real appointments and can&rsquo;t double&#8209;book.</h1>
+    <p>You're a customer of <strong>Copperline Heating &amp; Air</strong> in Austin. Ask it anything, book a visit, then reschedule or cancel it. Next to the chat you see what the business sees: the technicians' calendar updating as the AI works.</p>
+  </section>
+
+  <div class="stage">
+    <!-- The customer's side: the chat widget as it would sit on the company website -->
+    <section class="widget" aria-label="Copperline chat">
+      <header class="widget-head">
+        <div class="brand-mark" aria-hidden="true">C</div>
+        <div>
+          <div class="widget-title">Copperline Heating &amp; Air</div>
+          <div class="widget-sub"><span class="dot" id="statusDot"></span><span id="statusText">Connecting…</span></div>
+        </div>
+      </header>
+      <div class="messages" id="messages" aria-live="polite">
+        <div class="msg bot">Hi, I'm the Copperline assistant. I can book a repair, tune-up or estimate, answer questions, or change an existing appointment. What can I help with?</div>
+      </div>
+      <div class="suggestions" id="suggestions">
+        <button type="button">My AC stopped cooling, can someone come out this week?</button>
+        <button type="button">How much is a tune-up?</button>
+        <button type="button">I'd like a new system estimate on Saturday</button>
+      </div>
+      <form class="composer" id="composer">
+        <label class="sr-only" for="input">Message</label>
+        <textarea id="input" rows="1" placeholder="Type a message" maxlength="600" disabled></textarea>
+        <button type="submit" id="send" disabled>Send</button>
+      </form>
+      <p class="fine" id="fine">This is a demo. Use made-up names and numbers; ZIP codes starting 787 are in the service area.</p>
+    </section>
+
+    <!-- The business's side -->
+    <section class="backstage" aria-label="What the business sees">
+      <div class="backstage-head">
+        <h2>Technician calendar</h2>
+        <div class="legend">
+          <span><i class="swatch existing"></i>Existing bookings</span>
+          <span><i class="swatch fresh"></i>Booked in this chat</span>
+        </div>
+      </div>
+      <div class="timeline" id="timeline" aria-describedby="timelineHelp"></div>
+      <p class="sr-only" id="timelineHelp">Each day shows two lanes, one per technician, from opening to closing time.</p>
+
+      <div class="lower">
+        <section class="activity">
+          <h3>What the AI did</h3>
+          <ol class="events" id="events">
+            <li class="empty">Every availability check, booking and refusal shows up here as it happens.</li>
+          </ol>
+          <p class="meter" id="meter"></p>
+        </section>
+
+        <section class="race">
+          <h3>Double-booking test</h3>
+          <p>Send 20 requests for the same slot at once. Each technician can only take it once, so at most two can succeed.</p>
+          <button type="button" class="ghost" id="raceBtn">Run the test</button>
+          <div class="race-result" id="raceResult" hidden></div>
+        </section>
+      </div>
+    </section>
+  </div>
+
+  <section class="notes">
+    <h2>How it's built</h2>
+    <div class="notes-grid">
+      <div>
+        <h3>The AI can't overbook</h3>
+        <p>Every booking claims each half-hour it covers for one technician, and the database rejects any overlapping claim. It holds even if many requests or servers race for the same time.</p>
+      </div>
+      <div>
+        <h3>It only offers real times</h3>
+        <p>The AI calls the booking system for availability and must use a time it returned. Opening hours, lead time and job length are enforced in code, not left to the AI.</p>
+      </div>
+      <div>
+        <h3>Customers' bookings stay private</h3>
+        <p>Changing or cancelling needs the reference code and the last four digits of the phone number. The calendar here masks names and numbers.</p>
+      </div>
+      <div>
+        <h3>Spend is capped</h3>
+        <p>Each chat passes a quick proof-of-work check, has a message limit, and the whole demo has a daily budget and a switch to turn the AI off.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-row">
+    <p>I build AI assistants like this for real businesses, connected to your own calendar, CRM and phone or WhatsApp.</p>
+    <a class="hire solid" href="https://www.upwork.com/freelancers/~0170dd39761ac49004" target="_blank" rel="noopener">Work with me on Upwork</a>
+  </div>
+</footer>
+
+<script src="app.js?v=3" type="module"></script>
+</body>
+</html>
