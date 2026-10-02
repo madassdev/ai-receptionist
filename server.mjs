@@ -15,6 +15,22 @@ seedUpcoming(db);
 purgeOld(db);
 setInterval(() => { seedUpcoming(db); purgeOld(db); }, 60 * 60_000).unref();
 
+// Is the AI provider usable? A 1-token probe at start and every 15 minutes. With no credit
+// the request is refused and costs nothing; with credit it costs a fraction of a cent.
+const aiHealth = { ok: null, checkedAt: 0 };
+const probeClient = new Anthropic({ timeout: 15_000, maxRetries: 0 });
+async function probeAi() {
+  try {
+    await probeClient.messages.create({ model: 'claude-haiku-4-5', max_tokens: 1, messages: [{ role: 'user', content: 'ok' }] });
+    aiHealth.ok = true;
+  } catch (err) {
+    aiHealth.ok = !(err instanceof Anthropic.AuthenticationError || (err instanceof Anthropic.BadRequestError && /credit balance/i.test(err.message)));
+  }
+  aiHealth.checkedAt = Date.now();
+}
+if (LIMITS.aiEnabled) { probeAi(); setInterval(probeAi, 15 * 60_000).unref(); }
+const aiStatus = () => aiBlocked(db) ?? (aiHealth.ok === false ? 'paused' : 'ok');
+
 const app = express();
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
@@ -47,8 +63,14 @@ app.get('/api/schedule', limiter(120, 1), (req, res) => {
   res.json({
     bookings: schedule(db, nowLocal(), days),
     handoffs: recentHandoffs(db),
-    ai: { status: aiBlocked(db) ?? 'ok', spentToday: Number(u.cost_usd.toFixed(4)), budget: LIMITS.dailyBudgetUsd },
+    ai: { status: aiStatus(), spentToday: Number(u.cost_usd.toFixed(4)), budget: LIMITS.dailyBudgetUsd },
   });
+});
+
+// Real open times for a service (no AI involved). The example conversation uses these.
+app.get('/api/slots', limiter(60, 10), (req, res) => {
+  const service = SERVICES[req.query.service] ? req.query.service : 'repair';
+  res.json(availableSlots(db, service, null, null, { limit: 6 }));
 });
 
 // Step 1: the browser asks for a proof-of-work puzzle.
@@ -92,7 +114,8 @@ app.post('/api/chat', limiter(40, 60), async (req, res) => {
     if (err instanceof AiUnavailable) return res.status(503).json({ error: UNAVAILABLE[err.message] ?? UNAVAILABLE.disabled });
     if (err instanceof Anthropic.BadRequestError && /credit balance/i.test(err.message)) {
       console.error('anthropic: out of credit');
-      return res.status(503).json({ error: UNAVAILABLE.no_credit });
+      aiHealth.ok = false;
+      return res.status(503).json({ error: UNAVAILABLE.no_credit, paused: true });
     }
     if (err instanceof Anthropic.RateLimitError) return res.status(503).json({ error: 'The AI service is busy. Try again in a minute.' });
     if (err instanceof Anthropic.APIError) {

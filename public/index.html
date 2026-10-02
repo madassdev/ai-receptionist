@@ -4,114 +4,187 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AI Receptionist Demo</title>
-<meta name="description" content="Chat with an AI receptionist for a heating and air company. It checks real availability, books, reschedules and cancels, and the database makes double-booking impossible.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%231A2530'/><rect x='7' y='9' width='18' height='4' rx='2' fill='%23E2A11A'/><rect x='7' y='16' width='11' height='4' rx='2' fill='white'/><rect x='7' y='23' width='14' height='2.5' rx='1.25' fill='white' opacity='.5'/></svg>">
+<meta name="description" content="An AI receptionist for home-service businesses: it answers customers, books real free time slots day or night, and can never double-book. Try it or watch the 30-second example.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='9' fill='%230D9488'/><rect x='8' y='9' width='16' height='15' rx='3' fill='none' stroke='white' stroke-width='2.4'/><path d='M12 17l3 3 5-6' stroke='%23FBBF24' stroke-width='2.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=3">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="kit.css?v=7">
+<link rel="stylesheet" href="app.css?v=7">
 </head>
 <body>
-<header class="top">
-  <div class="wrap top-row">
-    <span class="by">Demo by <strong>Frank A.</strong>, AI integration engineer</span>
-    <a class="hire" href="https://www.upwork.com/freelancers/~0170dd39761ac49004" target="_blank" rel="noopener">Hire me on Upwork</a>
+<nav class="nav">
+  <div class="wrap nav-row">
+    <a class="logo" href="#top"><span class="logo-mark"><i data-icon="calendar-check"></i></span><span>Copperline Heating &amp; Air<small>AI receptionist demo</small></span></a>
+    <div class="nav-links">
+      <a href="#try">Try it</a><a href="#how">How it works</a><a href="#faq">Questions</a>
+      <a class="btn btn-dark btn-sm" href="https://www.upwork.com/freelancers/~0170dd39761ac49004" target="_blank" rel="noopener">Hire me</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="eyebrow"><span class="dot"><i data-icon="sparkles"></i></span>Live demo for home-service businesses</span>
+      <h1>Never miss a <span class="mark">booking</span> again.</h1>
+      <p class="lede">This AI receptionist chats with your customers, answers their questions and books them into a real free slot in your calendar, day or night. You just show up to the job.</p>
+      <div class="hero-cta">
+        <button type="button" class="btn btn-primary" data-play><i data-icon="play"></i>Watch the 30-second example</button>
+        <a class="btn btn-line" href="#try"><i data-icon="message-circle-more"></i>Try it yourself</a>
+      </div>
+      <ul class="benefits">
+        <li><span class="tick"><i data-icon="check"></i></span>Replies in seconds, 24/7</li>
+        <li><span class="tick"><i data-icon="check"></i></span>Only offers times you're free</li>
+        <li><span class="tick"><i data-icon="check"></i></span>Can't double-book</li>
+        <li><span class="tick"><i data-icon="check"></i></span>Passes tricky cases to you</li>
+      </ul>
+    </div>
+
+    <div class="hero-art" aria-hidden="true">
+      <div class="art-phone">
+        <div class="art-top"><span class="art-avatar"><i data-icon="bot"></i></span><b>Copperline</b><span class="art-online"></span></div>
+        <div class="art-msg me m1">My AC stopped working 😩</div>
+        <div class="art-msg bot m2">So sorry! I can send Elena on <b>Tue at 2:00 PM</b>. Shall I book it?</div>
+        <div class="art-msg me m3">Yes please!</div>
+        <div class="art-msg bot m4">Booked ✅ She'll call 20 min before.</div>
+      </div>
+      <div class="art-cal">
+        <div class="art-cal-head"><i data-icon="calendar"></i><b>Tuesday</b><span>Elena</span></div>
+        <div class="art-slot">9:00 AM<span class="busy">Tune-up</span></div>
+        <div class="art-slot">11:00 AM<span class="busy">Repair</span></div>
+        <div class="art-slot target">2:00 PM<span class="free">Free</span><span class="booked"><i data-icon="check"></i>Booked</span></div>
+        <div class="art-slot">4:00 PM<span class="busy">Estimate</span></div>
+      </div>
+      <div class="art-badge"><span><i data-icon="bell"></i></span><div><b>New booking</b><small>AC repair, Tue 2:00 PM</small></div></div>
+    </div>
   </div>
 </header>
 
-<main class="wrap">
-  <section class="intro">
-    <h1>An AI receptionist that books real appointments and can&rsquo;t double&#8209;book.</h1>
-    <p>You're a customer of <strong>Copperline Heating &amp; Air</strong> in Austin. Ask it anything, book a visit, then reschedule or cancel it. Next to the chat you see what the business sees: the technicians' calendar updating as the AI works.</p>
+<main>
+  <section class="section" id="try">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="tag"><i data-icon="smartphone"></i>Try it</span>
+        <h2>You're the customer. Watch the business side update live.</h2>
+        <p>Chat on the left like a customer would. On the right is what the business owner sees: the technicians' calendar, every step the AI took, and a stress test.</p>
+      </div>
+
+      <div class="demo">
+        <div class="phone-col">
+          <div class="phone">
+            <div class="phone-top">
+              <span class="avatar"><i data-icon="bot"></i></span>
+              <div><b>Copperline assistant</b><span class="pill-live" id="live">Connecting…</span></div>
+            </div>
+            <div class="messages" id="messages" aria-live="polite"></div>
+            <div class="quick" id="quick">
+              <button type="button" class="chip"><i data-icon="thermometer-snowflake"></i>My AC stopped cooling, can someone come this week?</button>
+              <button type="button" class="chip"><i data-icon="wallet"></i>How much is a tune-up?</button>
+              <button type="button" class="chip"><i data-icon="calendar-clock"></i>Can I get an estimate on Saturday?</button>
+            </div>
+            <form class="composer" id="composer">
+              <label class="sr-only" for="input">Message</label>
+              <textarea id="input" rows="1" maxlength="600" placeholder="Type a message…" disabled></textarea>
+              <button type="submit" class="send" id="send" aria-label="Send" disabled><i data-icon="send"></i></button>
+            </form>
+          </div>
+          <div id="aiNotice"></div>
+          <p class="tiny">Demo only: use made-up names and numbers. ZIP codes starting with 787 are in the service area.</p>
+        </div>
+
+        <div class="board card">
+          <div class="tabs" role="tablist">
+            <button role="tab" aria-selected="true" data-tab="cal"><i data-icon="calendar"></i>Calendar</button>
+            <button role="tab" aria-selected="false" data-tab="log"><i data-icon="list-checks"></i>What the AI did <span class="tab-count" id="logCount" hidden></span></button>
+            <button role="tab" aria-selected="false" data-tab="test"><i data-icon="swords"></i>Try to break it</button>
+          </div>
+
+          <div class="tab-panel" data-panel="cal">
+            <div class="cal-legend">
+              <span><i class="sw marcus"></i>Marcus</span><span><i class="sw elena"></i>Elena</span><span><i class="sw new"></i>Booked in this chat</span><span><i class="sw closed"></i>Closed or past</span>
+            </div>
+            <div class="cal" id="cal"></div>
+          </div>
+
+          <div class="tab-panel" data-panel="log" hidden>
+            <ol class="log" id="log"><li class="empty">Each time the AI checks the calendar, books, changes or hands something to staff, it shows up here.</li></ol>
+          </div>
+
+          <div class="tab-panel" data-panel="test" hidden>
+            <div class="race">
+              <div class="race-intro">
+                <span class="race-icon"><i data-icon="swords"></i></span>
+                <div><h3>20 customers grab the same time slot at once</h3><p>A badly built booking system gives the slot to several of them. Here each technician can only be booked once, so at most two get through.</p></div>
+              </div>
+              <button type="button" class="btn btn-primary" id="raceBtn"><i data-icon="zap"></i>Send 20 bookings at once</button>
+              <div class="race-grid" id="raceGrid" aria-live="polite"></div>
+              <p class="race-result" id="raceResult"></p>
+            </div>
+          </div>
+          <p class="spend" id="spend"></p>
+        </div>
+      </div>
+    </div>
   </section>
 
-  <div class="stage">
-    <!-- The customer's side: the chat widget as it would sit on the company website -->
-    <section class="widget" aria-label="Copperline chat">
-      <header class="widget-head">
-        <div class="brand-mark" aria-hidden="true">C</div>
-        <div>
-          <div class="widget-title">Copperline Heating &amp; Air</div>
-          <div class="widget-sub"><span class="dot" id="statusDot"></span><span id="statusText">Connecting…</span></div>
-        </div>
-      </header>
-      <div class="messages" id="messages" aria-live="polite">
-        <div class="msg bot">Hi, I'm the Copperline assistant. I can book a repair, tune-up or estimate, answer questions, or change an existing appointment. What can I help with?</div>
+  <section class="section section-alt" id="how">
+    <div class="wrap">
+      <div class="section-head center reveal">
+        <span class="tag"><i data-icon="lightbulb"></i>How it works</span>
+        <h2>Three steps, no phone tag</h2>
+        <p>Your customer gets an answer straight away, and you get a confirmed job in your calendar.</p>
       </div>
-      <div class="suggestions" id="suggestions">
-        <button type="button">My AC stopped cooling, can someone come out this week?</button>
-        <button type="button">How much is a tune-up?</button>
-        <button type="button">I'd like a new system estimate on Saturday</button>
+      <div class="steps">
+        <div class="step card reveal"><span class="step-num">1</span><span class="step-icon"><i data-icon="message-circle-more"></i></span><h3>Customer asks</h3><p>On your website, WhatsApp or by text: "My heating's broken, can someone come Thursday?"</p></div>
+        <div class="step card reveal"><span class="step-num">2</span><span class="step-icon"><i data-icon="calendar-clock"></i></span><h3>AI checks your real calendar</h3><p>It only offers times a technician is actually free, within your opening hours and job lengths.</p></div>
+        <div class="step card reveal"><span class="step-num">3</span><span class="step-icon"><i data-icon="calendar-check"></i></span><h3>Job booked and confirmed</h3><p>The customer gets a reference and a confirmation. You see the job appear in your calendar.</p></div>
       </div>
-      <form class="composer" id="composer">
-        <label class="sr-only" for="input">Message</label>
-        <textarea id="input" rows="1" placeholder="Type a message" maxlength="600" disabled></textarea>
-        <button type="submit" id="send" disabled>Send</button>
-      </form>
-      <p class="fine" id="fine">This is a demo. Use made-up names and numbers; ZIP codes starting 787 are in the service area.</p>
-    </section>
+    </div>
+  </section>
 
-    <!-- The business's side -->
-    <section class="backstage" aria-label="What the business sees">
-      <div class="backstage-head">
-        <h2>Technician calendar</h2>
-        <div class="legend">
-          <span><i class="swatch existing"></i>Existing bookings</span>
-          <span><i class="swatch fresh"></i>Booked in this chat</span>
-        </div>
+  <section class="section">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="tag"><i data-icon="trophy"></i>What you get</span>
+        <h2>Built for how your business already works</h2>
       </div>
-      <div class="timeline" id="timeline" aria-describedby="timelineHelp"></div>
-      <p class="sr-only" id="timelineHelp">Each day shows two lanes, one per technician, from opening to closing time.</p>
+      <div class="features">
+        <div class="feature card reveal"><span class="feature-icon"><i data-icon="globe"></i></span><div><h3>On your website, WhatsApp or SMS</h3><p>One assistant, every channel your customers use.</p></div></div>
+        <div class="feature card reveal"><span class="feature-icon"><i data-icon="calendar"></i></span><div><h3>Connected to your calendar</h3><p>Google Calendar, Jobber, ServiceM8, Housecall Pro or your own system.</p></div></div>
+        <div class="feature card reveal"><span class="feature-icon"><i data-icon="wallet"></i></span><div><h3>Knows your prices and rules</h3><p>Services, call-out fees, service area and policies, answered correctly.</p></div></div>
+        <div class="feature card reveal"><span class="feature-icon"><i data-icon="bell"></i></span><div><h3>Confirms and reminds</h3><p>Customers get their booking reference, and changes or cancellations are self-serve.</p></div></div>
+        <div class="feature card reveal"><span class="feature-icon"><i data-icon="headset"></i></span><div><h3>Hands tricky cases to you</h3><p>Complaints, emergencies or "I want a person" go straight to your team.</p></div></div>
+        <div class="feature card reveal"><span class="feature-icon"><i data-icon="shield-check"></i></span><div><h3>Cheap and safe to run</h3><p>A few cents per conversation, with spending limits and spam protection built in.</p></div></div>
+      </div>
+    </div>
+  </section>
 
-      <div class="lower">
-        <section class="activity">
-          <h3>What the AI did</h3>
-          <ol class="events" id="events">
-            <li class="empty">Every availability check, booking and refusal shows up here as it happens.</li>
-          </ol>
-          <p class="meter" id="meter"></p>
-        </section>
+  <section class="section section-alt" id="faq">
+    <div class="wrap">
+      <div class="section-head center reveal"><span class="tag"><i data-icon="info"></i>Questions</span><h2>What business owners usually ask</h2></div>
+      <div class="faq">
+        <details><summary>Could it book a time when nobody is free?<i data-icon="chevron-down"></i></summary><p>No. The AI can only offer times your system says are free, and the booking system itself refuses any slot that's already taken, even if two customers try at the same second. You can test that in "Try to break it" above.</p></details>
+        <details><summary>What if a customer asks something it shouldn't answer?<i data-icon="chevron-down"></i></summary><p>It answers from your price list and policies only. Anything outside that (complaints, emergencies, billing disputes) gets handed to your team with the customer's details.</p></details>
+        <details><summary>Can customers change or cancel their own bookings?<i data-icon="chevron-down"></i></summary><p>Yes, with their booking reference and the last four digits of their phone number, so nobody can change someone else's appointment.</p></details>
+        <details><summary>How much does it cost to run?<i data-icon="chevron-down"></i></summary><p>Usually a few cents per conversation in AI usage. Daily spending caps mean a busy or spammy day can never run up a surprise bill.</p></details>
+        <details><summary>Does it work with my existing software?<i data-icon="chevron-down"></i></summary><p>This demo uses its own calendar. For your business it connects to what you already use, such as Google Calendar, Jobber, ServiceM8, Housecall Pro or a CRM like GoHighLevel.</p></details>
+      </div>
+    </div>
+  </section>
 
-        <section class="race">
-          <h3>Double-booking test</h3>
-          <p>Send 20 requests for the same slot at once. Each technician can only take it once, so at most two can succeed.</p>
-          <button type="button" class="ghost" id="raceBtn">Run the test</button>
-          <div class="race-result" id="raceResult" hidden></div>
-        </section>
-      </div>
-    </section>
-  </div>
-
-  <section class="notes">
-    <h2>How it's built</h2>
-    <div class="notes-grid">
-      <div>
-        <h3>The AI can't overbook</h3>
-        <p>Every booking claims each half-hour it covers for one technician, and the database rejects any overlapping claim. It holds even if many requests or servers race for the same time.</p>
-      </div>
-      <div>
-        <h3>It only offers real times</h3>
-        <p>The AI calls the booking system for availability and must use a time it returned. Opening hours, lead time and job length are enforced in code, not left to the AI.</p>
-      </div>
-      <div>
-        <h3>Customers' bookings stay private</h3>
-        <p>Changing or cancelling needs the reference code and the last four digits of the phone number. The calendar here masks names and numbers.</p>
-      </div>
-      <div>
-        <h3>Spend is capped</h3>
-        <p>Each chat passes a quick proof-of-work check, has a message limit, and the whole demo has a daily budget and a switch to turn the AI off.</p>
+  <section class="section">
+    <div class="wrap">
+      <div class="cta-band reveal">
+        <div><h2>Want this for your business?</h2><p>I build AI receptionists like this, connected to your calendar, website and messaging. Tell me how you take bookings today and I'll show you what it would look like.</p></div>
+        <a class="btn" href="https://www.upwork.com/freelancers/~0170dd39761ac49004" target="_blank" rel="noopener"><i data-icon="arrow-right"></i>Work with me on Upwork</a>
       </div>
     </div>
   </section>
 </main>
 
-<footer class="foot">
-  <div class="wrap foot-row">
-    <p>I build AI assistants like this for real businesses, connected to your own calendar, CRM and phone or WhatsApp.</p>
-    <a class="hire solid" href="https://www.upwork.com/freelancers/~0170dd39761ac49004" target="_blank" rel="noopener">Work with me on Upwork</a>
-  </div>
-</footer>
+<footer class="foot"><div class="wrap foot-row"><span>Demo by Frank A., AI integration engineer. Copperline Heating &amp; Air is a fictional business.</span><a href="https://github.com/madassdev/ai-receptionist" target="_blank" rel="noopener">Source code on GitHub</a></div></footer>
 
-<script src="app.js?v=3" type="module"></script>
+<script src="app.js?v=7" type="module"></script>
 </body>
 </html>

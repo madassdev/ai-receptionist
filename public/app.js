@@ -1,234 +1,255 @@
-const $ = (s) => document.querySelector(s);
-const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+import { $, $$, esc, sleep, loadIcons, hydrateIcons, icon, toast, Guide, reveal, startSession, postJson, reducedMotion } from './kit.js?v=7';
 
-const els = {
-  messages: $('#messages'), input: $('#input'), send: $('#send'), composer: $('#composer'),
-  suggestions: $('#suggestions'), statusDot: $('#statusDot'), statusText: $('#statusText'),
-  timeline: $('#timeline'), events: $('#events'), meter: $('#meter'), fine: $('#fine'),
-  raceBtn: $('#raceBtn'), raceResult: $('#raceResult'),
-};
+const state = { config: null, session: null, busy: false, playing: false, aiStatus: 'ok', myRefs: new Set(), seen: new Set(), example: null, bookings: [] };
+const els = { messages: $('#messages'), input: $('#input'), send: $('#send'), composer: $('#composer'), quick: $('#quick'), live: $('#live'), cal: $('#cal'), log: $('#log'), logCount: $('#logCount'), notice: $('#aiNotice'), spend: $('#spend') };
 
-const DAY_START = 8 * 60, DAY_END = 18 * 60, SPAN = DAY_END - DAY_START;
-const state = { config: null, session: null, busy: false, myRefs: new Set(), seen: new Set(), conversationCost: 0 };
+// ---------- checklist ----------
+const guide = new Guide({
+  key: 'receptionist', title: 'Your demo checklist', openWhen: '#try',
+  missions: [
+    { id: 'watch', title: 'Watch the 30-second example', hint: 'See a customer book a repair, start to finish.', action: { label: 'Play it', run: () => playExample() } },
+    { id: 'ask', title: 'Ask it a question', hint: 'Prices, opening hours, what you service.', action: { label: 'Ask about prices', run: () => send('How much is a tune-up?') } },
+    { id: 'book', title: 'Book a visit', hint: 'Pick a time it offers and give made-up details.', action: { label: 'Start a booking', run: () => send('My AC stopped cooling, can someone come this week?') } },
+    { id: 'test', title: 'Try to break it', hint: 'Send 20 bookings for one slot at the same time.', action: { label: 'Open the test', run: () => { selectTab('test'); $('#try').scrollIntoView({ behavior: 'smooth' }); } } },
+  ],
+  onComplete: () => toast('You saw everything it does. Want one for your business?', { icon: 'party-popper', ms: 6000 }),
+});
+
+// ---------- tabs ----------
+function selectTab(name) {
+  for (const b of $$('.tabs button')) b.setAttribute('aria-selected', String(b.dataset.tab === name));
+  for (const p of $$('.tab-panel')) p.hidden = p.dataset.panel !== name;
+  if (name === 'log') els.logCount.hidden = true;
+}
+$('.tabs').addEventListener('click', (e) => { const b = e.target.closest('button[data-tab]'); if (b) selectTab(b.dataset.tab); });
 
 // ---------- calendar ----------
-
-const toMin = (hhmm) => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; };
-const pct = (min) => `${((min - DAY_START) / SPAN) * 100}%`;
-
-function upcomingDays(count) {
-  const days = [];
-  const base = new Date(`${state.config.today}T12:00:00`);
-  for (let i = 0; days.length < count; i++) {
-    const d = new Date(base); d.setDate(base.getDate() + i);
-    days.push(d);
-  }
-  return days;
-}
-
+const DAY_START = 8 * 60, DAY_END = 18 * 60, SPAN = DAY_END - DAY_START;
+const toMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+const pct = (m) => `${((Math.min(Math.max(m, DAY_START), DAY_END) - DAY_START) / SPAN) * 100}%`;
 const isoDay = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-const luxonWeekday = (d) => (d.getDay() === 0 ? 7 : d.getDay());
+const SHORT = { 'Heating or cooling repair visit': 'Repair', 'AC or furnace tune-up': 'Tune-up', 'New system estimate': 'Estimate', 'Smart thermostat install': 'Thermostat' };
 
-function renderTimeline(bookings) {
-  const { technicians, business } = state.config;
+function renderCalendar() {
+  const { technicians, business, today, now } = state.config;
   const ticks = [8, 10, 12, 14, 16, 18].map((h) => `<span style="left:${pct(h * 60)}">${h > 12 ? h - 12 : h}${h >= 12 ? 'pm' : 'am'}</span>`).join('');
-  let html = `<div class="hours"><span></span><div class="scale">${ticks}</div></div>`;
-  for (const d of upcomingDays(7)) {
+  let html = `<div class="cal-hours"><span></span><div class="scale" style="margin-left:28px">${ticks}</div></div>`;
+  const base = new Date(`${today}T12:00:00`);
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(base); d.setDate(base.getDate() + i);
     const key = isoDay(d);
-    const label = `<b>${d.toLocaleDateString('en-US', { weekday: 'short' })} ${d.getDate()}</b><small>${key === state.config.today ? 'Today' : d.toLocaleDateString('en-US', { month: 'short' })}</small>`;
-    const hours = business.hours[luxonWeekday(d)];
-    if (!hours) {
-      html += `<div class="day closed"><div class="day-label">${label}</div><div class="closed-note">Closed</div></div>`;
-      continue;
-    }
+    const label = `<div class="day-label"><b>${d.toLocaleDateString('en-US', { weekday: 'short' })} ${d.getDate()}</b><small class="${i === 0 ? 'today' : ''}">${i === 0 ? 'Today' : d.toLocaleDateString('en-US', { month: 'short' })}</small></div>`;
+    const hours = business.hours[d.getDay() === 0 ? 7 : d.getDay()];
+    if (!hours) { html += `<div class="day">${label}<div class="closed-row">Closed on Sundays</div></div>`; continue; }
     const [open, close] = hours.map(toMin);
+    const pastTo = i === 0 ? Math.max(open, Math.min(toMin(now), close)) : open;
     const lanes = technicians.map((t) => {
-      const mine = bookings.filter((b) => b.day === key && b.technician === t.name);
-      // Hatch closed hours, and on today also the hours that have already passed.
-      const nowMin = key === state.config.today ? toMin(state.config.now) : 0;
-      const shadeTo = Math.max(open, Math.min(nowMin, close));
-      const hatch = 'background:repeating-linear-gradient(135deg,#eef1f3 0 4px,#fff 4px 8px)';
-      const shade = [
-        shadeTo > DAY_START ? `<div class="block" style="left:0;width:${pct(shadeTo)};${hatch}" aria-hidden="true"></div>` : '',
-        close < DAY_END ? `<div class="block" style="left:${pct(close)};right:0;background:repeating-linear-gradient(135deg,#eef1f3 0 4px,#fff 4px 8px)" aria-hidden="true"></div>` : '',
-      ].join('');
-      const blocks = mine.map((b) => {
-        const fresh = state.myRefs.has(b.ref);
-        const just = fresh && !state.seen.has(b.ref);
+      const cls = t.name.toLowerCase();
+      const shade = `${pastTo > DAY_START ? `<div class="blk closed" style="left:0;width:${pct(pastTo)}"></div>` : ''}${close < DAY_END ? `<div class="blk closed" style="left:${pct(close)};right:0"></div>` : ''}`;
+      const items = state.bookings.filter((b) => b.day === key && b.technician === t.name).map((b) => {
+        const fresh = state.myRefs.has(b.ref), just = fresh && !state.seen.has(b.ref);
         if (fresh) state.seen.add(b.ref);
-        const w = `left:${pct(toMin(b.start))};width:calc(${pct(toMin(b.end))} - ${pct(toMin(b.start))})`;
-        const title = `${b.start}–${b.end} ${b.service}, ${b.customer} (${b.phone})`;
-        return `<div class="block${fresh ? ' fresh' : ''}${just ? ' just' : ''}" style="${w}" title="${esc(title)}">${fresh ? esc(b.customer) : ''}</div>`;
-      }).join('');
-      return `<div class="lane-row"><span class="who">${esc(t.name)}</span><div class="lane">${shade}${blocks}</div></div>`;
+        return `<div class="blk ${fresh ? 'fresh' : ''} ${just ? 'just' : ''}" style="left:${pct(toMin(b.start))};width:calc(${pct(toMin(b.end))} - ${pct(toMin(b.start))})" title="${esc(`${b.start}–${b.end} ${b.service}, ${b.customer}`)}">${fresh ? esc(b.customer) : esc(SHORT[b.service] ?? '')}</div>`;
+      });
+      const ex = state.example && state.example.day === key && state.example.technician === t.name
+        ? `<div class="blk example just" style="left:${pct(toMin(state.example.start))};width:calc(${pct(toMin(state.example.end))} - ${pct(toMin(state.example.start))})">Jane D. (example)</div>` : '';
+      return `<div class="lane ${cls}"><span class="who">${esc(t.name[0])}</span>${shade}${items.join('')}${ex}</div>`;
     }).join('');
-    html += `<div class="day"><div class="day-label">${label}</div><div class="lanes">${lanes}</div></div>`;
+    html += `<div class="day">${label}<div class="lanes">${lanes}</div></div>`;
   }
-  els.timeline.innerHTML = html;
+  els.cal.innerHTML = html;
 }
 
-let lastAi = null;
 async function refreshSchedule() {
   try {
-    const r = await fetch('/api/schedule?days=8');
-    if (!r.ok) return;
-    const data = await r.json();
-    lastAi = data.ai;
-    renderTimeline(data.bookings);
-    renderMeter();
-  } catch { /* the next poll will retry */ }
+    const data = await (await fetch('/api/schedule?days=8')).json();
+    state.bookings = data.bookings;
+    state.aiStatus = data.ai.status;
+    renderCalendar();
+    renderAiNotice();
+    els.spend.textContent = `Demo AI spend today: $${data.ai.spentToday.toFixed(2)} of a $${data.ai.budget.toFixed(2)} daily cap.`;
+  } catch { /* next poll retries */ }
 }
 
-function renderMeter() {
-  if (!lastAi) return;
-  const parts = [];
-  if (state.conversationCost > 0) parts.push(`This chat has cost $${state.conversationCost.toFixed(3)} in AI usage.`);
-  parts.push(`Demo spend today: $${lastAi.spentToday.toFixed(2)} of a $${lastAi.budget.toFixed(2)} daily cap.`);
-  els.meter.textContent = parts.join(' ');
+function renderAiNotice() {
+  if (state.aiStatus === 'ok' || state.playing) { els.notice.innerHTML = ''; return; }
+  els.notice.innerHTML = `<div class="notice warn">${icon('hourglass')}<div><b>The live AI is taking a break right now.</b> The calendar and the stress test still work, and the 30-second example shows exactly how a booking goes.<br><button type="button" class="btn btn-soft btn-sm" data-play>${icon('play')}Play the example</button></div></div>`;
 }
 
 // ---------- activity log ----------
-
-const TOOL_NAMES = {
-  check_availability: 'Checked availability', book_appointment: 'Booking', find_booking: 'Lookup',
-  reschedule_booking: 'Reschedule', cancel_booking: 'Cancellation', hand_off_to_staff: 'Handoff to staff',
+const LOG = {
+  check_availability: { icon: 'calendar-clock', title: 'Checked the calendar' },
+  book_appointment: { icon: 'calendar-check', title: 'Booked a visit' },
+  find_booking: { icon: 'search', title: 'Looked up a booking' },
+  reschedule_booking: { icon: 'repeat', title: 'Moved a booking' },
+  cancel_booking: { icon: 'calendar-x', title: 'Cancelled a booking' },
+  hand_off_to_staff: { icon: 'headset', title: 'Passed to a person' },
 };
-
-function addEvents(events) {
+function addLog(events) {
   if (!events.length) return;
-  els.events.querySelector('.empty')?.remove();
+  els.log.querySelector('.empty')?.remove();
   for (const e of events) {
-    if (e.ref) state.myRefs.add(e.ref);
+    const meta = LOG[e.tool] ?? { icon: 'bot', title: e.tool };
     const li = document.createElement('li');
-    li.className = e.handoff ? 'handoff' : e.ok ? 'ok' : 'fail';
-    li.innerHTML = `<span class="tool">${esc(TOOL_NAMES[e.tool] ?? e.tool)}</span>${esc(e.text)}`;
-    els.events.prepend(li);
+    li.className = e.handoff ? 'handoff' : !e.ok ? 'fail' : e.tool === 'book_appointment' || e.tool === 'reschedule_booking' ? 'book' : '';
+    li.innerHTML = `<span class="ico">${icon(e.ok === false ? 'x' : meta.icon)}</span><div><b>${esc(e.ok === false ? `${meta.title}: refused` : meta.title)}</b><span>${esc(e.text)}${e.example ? ' (example)' : ''}</span></div>`;
+    els.log.prepend(li);
+  }
+  if ($('.tabs [data-tab="log"]').getAttribute('aria-selected') !== 'true') {
+    els.logCount.hidden = false;
+    els.logCount.textContent = Number(els.logCount.textContent || 0) + events.length;
   }
 }
 
 // ---------- chat ----------
-
-function addMessage(kind, text) {
+function bubble(kind, text, extra = '') {
   const div = document.createElement('div');
-  div.className = `msg ${kind}`;
+  div.className = `msg ${kind} ${extra}`;
   div.textContent = text;
   els.messages.append(div);
   els.messages.scrollTop = els.messages.scrollHeight;
   return div;
 }
-
-function setStatus(kind, text) {
-  els.statusDot.className = `dot ${kind}`;
-  els.statusText.textContent = text;
+function typing() {
+  const d = bubble('bot', '');
+  d.innerHTML = '<span class="typing"><i></i><i></i><i></i></span>';
+  return d;
 }
-
-function setBusy(busy) {
-  state.busy = busy;
-  const ready = !!state.session && !busy;
-  els.input.disabled = !state.session;
+function setReady() {
+  const ready = !!state.session && !state.busy && !state.playing;
+  els.input.disabled = !state.session || state.playing;
   els.send.disabled = !ready;
-  els.suggestions.querySelectorAll('button').forEach((b) => (b.disabled = !ready));
+  $$('.chip', els.quick).forEach((b) => (b.disabled = !ready));
 }
 
 async function send(text) {
-  text = text.trim();
-  if (!text || state.busy || !state.session) return;
-  els.suggestions.hidden = true;
-  addMessage('me', text);
+  text = String(text ?? '').trim();
+  if (!text || state.busy || state.playing) return;
+  if (!state.session) { toast('Still connecting, one moment…', { icon: 'hourglass', tone: 'warn' }); return; }
+  $('#try').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  els.quick.hidden = true;
+  bubble('me', text);
   els.input.value = '';
   autosize();
-  setBusy(true);
-  const typing = addMessage('bot typing', '');
-  typing.innerHTML = '<i></i><i></i><i></i>';
-  try {
-    const r = await fetch('/api/chat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ session: state.session, message: text }) });
-    const data = await r.json();
-    typing.remove();
-    if (!r.ok) {
-      addMessage('error', data.error ?? 'Something went wrong.');
-      if (data.expired) state.session = null;
-      return;
-    }
-    addEvents(data.events ?? []);
-    addMessage('bot', data.reply);
-    state.conversationCost = data.conversationCost ?? state.conversationCost;
-    if (data.messagesLeft <= 3) els.fine.textContent = `${data.messagesLeft} message${data.messagesLeft === 1 ? '' : 's'} left in this demo chat.`;
-    if (data.events?.length) await refreshSchedule(); else renderMeter();
-  } catch {
-    typing.remove();
-    addMessage('error', 'Could not reach the server. Check your connection and try again.');
-  } finally {
-    setBusy(false);
-    els.input.focus();
+  state.busy = true; setReady();
+  const t = typing();
+  const { ok, data } = await postJson('/api/chat', { session: state.session, message: text }).catch(() => ({ ok: false, data: { error: 'Could not reach the server. Check your connection.' } }));
+  t.remove();
+  state.busy = false; setReady();
+  if (!ok) {
+    bubble('err', data.error ?? 'Something went wrong.');
+    if (data.paused) { state.aiStatus = 'paused'; renderAiNotice(); }
+    if (data.expired) state.session = null;
+    return;
   }
+  bubble('bot', data.reply);
+  for (const e of data.events ?? []) if (e.ref) state.myRefs.add(e.ref);
+  addLog(data.events ?? []);
+  guide.complete('ask');
+  const booked = (data.events ?? []).find((e) => e.ok && e.tool === 'book_appointment');
+  if (booked) { guide.complete('book'); toast('New booking landed in the calendar', { icon: 'calendar-check', tone: 'ok' }); selectTab('cal'); }
+  if (data.events?.length) await refreshSchedule();
+  els.input.focus();
 }
 
-function autosize() {
-  els.input.style.height = 'auto';
-  els.input.style.height = `${Math.min(els.input.scrollHeight, 120)}px`;
-}
-
+function autosize() { els.input.style.height = 'auto'; els.input.style.height = `${Math.min(els.input.scrollHeight, 110)}px`; }
 els.composer.addEventListener('submit', (e) => { e.preventDefault(); send(els.input.value); });
 els.input.addEventListener('input', autosize);
-els.input.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(els.input.value); }
-});
-els.suggestions.addEventListener('click', (e) => { if (e.target.tagName === 'BUTTON') send(e.target.textContent); });
+els.input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(els.input.value); } });
+els.quick.addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) send(b.textContent); });
 
-// ---------- session: solve the proof-of-work puzzle, then open a chat ----------
-
-async function startSession() {
-  setStatus('', 'Connecting…');
+// ---------- the 30-second example (pre-written, uses real free times, books nothing) ----------
+async function playExample() {
+  if (state.playing) return;
+  state.playing = true; setReady(); renderAiNotice();
+  $('#try').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  selectTab('cal');
+  els.quick.hidden = true;
+  els.messages.innerHTML = '';
+  const tag = document.createElement('div');
+  tag.className = 'example-tag';
+  tag.innerHTML = `${icon('play')}Example conversation, written for this demo`;
+  els.messages.append(tag);
+  const speed = reducedMotion() ? 0.2 : 1;
+  const say = async (who, text, wait = 900) => {
+    if (who === 'bot') { const t = typing(); await sleep(wait * speed); t.remove(); }
+    else await sleep(wait * 0.6 * speed);
+    bubble(who === 'bot' ? 'bot' : 'me', text, 'example');
+  };
   try {
-    const ch = await (await fetch('/api/challenge')).json();
-    const worker = new Worker('pow-worker.js');
-    const { nonce } = await new Promise((resolve, reject) => {
-      worker.onmessage = (e) => resolve(e.data);
-      worker.onerror = reject;
-      worker.postMessage({ salt: ch.salt, bits: ch.bits });
-    });
-    worker.terminate();
-    const r = await fetch('/api/session', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: ch.token, nonce }) });
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.error);
-    state.session = data.session;
-    setStatus('on', 'Online, usually replies in a few seconds');
-    setBusy(false);
-  } catch (err) {
-    setStatus('off', 'Chat unavailable');
-    addMessage('error', err?.message || 'Could not start the chat. Reload the page to try again.');
+    const { slots } = await (await fetch('/api/slots?service=repair')).json();
+    const pickA = slots[0], pickB = slots[2] ?? slots[1] ?? slots[0];
+    await say('me', 'Hi, my AC stopped cooling. Can someone come out this week?', 800);
+    addLog([{ tool: 'check_availability', ok: true, text: `Found ${slots.length} open repair times`, example: true }]);
+    await say('bot', `Sorry to hear that! A repair visit takes 90 minutes and the $89 call-out fee goes toward the repair. I can do ${pickA.label} or ${pickB.label}. Which suits you?`, 1700);
+    await say('me', `${pickB.label.split(',')[0]} works.`, 1200);
+    await say('bot', 'Great. What is your name, phone number and address with ZIP code?', 1200);
+    await say('me', 'Jane Doe, 512 555 0199, 1 Main St, Austin 78704', 1500);
+    await say('bot', `Thanks Jane. To confirm: repair visit on ${pickB.label} at 1 Main St, Austin 78704, with ${pickB.technician}. Shall I book it?`, 1500);
+    await say('me', 'Yes please!', 900);
+    const t = typing(); await sleep(1100 * speed); t.remove();
+    const [day, time] = pickB.start.split('T');
+    const endMin = toMin(time) + 90;
+    state.example = { day, start: time, end: `${String(Math.floor(endMin / 60)).padStart(2, '0')}:${String(endMin % 60).padStart(2, '0')}`, technician: pickB.technician };
+    renderCalendar();
+    addLog([{ tool: 'book_appointment', ok: true, text: `Repair visit, ${pickB.label}, ${pickB.technician}`, example: true }]);
+    toast(`New booking: ${pickB.label} (example)`, { icon: 'bell', tone: 'ok' });
+    bubble('bot', `You're booked! Your reference is CL-7Q2K9P. ${pickB.technician} will call you 20 minutes before arriving. Anything else?`, 'example');
+    guide.complete('watch');
+    await sleep(1800 * speed);
+    const end = document.createElement('div');
+    end.className = 'example-tag';
+    end.innerHTML = `${icon('check')}End of example. The yellow dashed slot is not saved.`;
+    els.messages.append(end);
+    els.messages.scrollTop = els.messages.scrollHeight;
+  } catch {
+    bubble('err', 'The example could not load. Reload the page to try again.');
+  } finally {
+    state.playing = false; setReady(); renderAiNotice();
+    setTimeout(() => { state.example = null; renderCalendar(); }, 20000);
   }
 }
+document.addEventListener('click', (e) => { if (e.target.closest('[data-play]')) playExample(); });
 
-// ---------- double-booking test ----------
-
-els.raceBtn.addEventListener('click', async () => {
-  els.raceBtn.disabled = true;
-  els.raceResult.hidden = false;
-  els.raceResult.innerHTML = `<div class="dots">${'<span></span>'.repeat(20)}</div><p>Sending 20 requests…</p>`;
-  try {
-    const r = await fetch('/api/race', { method: 'POST' });
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.error);
-    const dots = els.raceResult.querySelectorAll('.dots span');
-    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    data.attempts.forEach((a, i) => setTimeout(() => dots[i].classList.add(a.ok ? 'won' : 'lost'), reduce ? 0 : i * 45));
+// ---------- try to break it ----------
+$('#raceBtn').addEventListener('click', async () => {
+  const btn = $('#raceBtn'), grid = $('#raceGrid'), result = $('#raceResult');
+  btn.disabled = true;
+  grid.innerHTML = Array.from({ length: 20 }, (_, i) => `<span class="p go">${i + 1}</span>`).join('');
+  result.textContent = 'Sending 20 bookings at the same moment…';
+  const { ok, data } = await postJson('/api/race', {});
+  if (!ok) { result.textContent = data.error ?? 'The test could not run. Try again in a minute.'; btn.disabled = false; return; }
+  await sleep(reducedMotion() ? 0 : 700);
+  const people = $$('.p', grid);
+  data.attempts.forEach((a, i) => setTimeout(() => {
+    people[i].className = `p ${a.ok ? 'won' : 'lost'}`;
+    people[i].innerHTML = icon(a.ok ? 'check' : 'x');
+  }, reducedMotion() ? 0 : i * 60));
+  setTimeout(() => {
     const won = data.attempts.filter((a) => a.ok);
-    setTimeout(() => {
-      els.raceResult.querySelector('p').textContent =
-        `${data.slot.label}: ${won.length} booked (${won.map((w) => w.technician).join(' and ')}), ${20 - won.length} refused because the slot was already taken. Test bookings are removed afterwards.`;
-    }, reduce ? 0 : 20 * 45);
-  } catch (err) {
-    els.raceResult.innerHTML = `<p>${esc(err.message || 'The test could not run. Try again in a minute.')}</p>`;
-  } finally {
-    setTimeout(() => (els.raceBtn.disabled = false), 1500);
-  }
+    result.innerHTML = `${icon('shield-check')} ${esc(data.slot.label)}: <b>${won.length} booked</b> (${esc(won.map((w) => w.technician).join(' and '))}), <b>${20 - won.length} turned away</b> because the slot was taken. No double-booking. Test bookings are removed straight after.`;
+    guide.complete('test');
+    btn.disabled = false;
+  }, reducedMotion() ? 0 : 20 * 60 + 200);
 });
 
 // ---------- boot ----------
-
+await loadIcons();
+hydrateIcons();
+reveal();
 state.config = await (await fetch('/api/config')).json();
 await refreshSchedule();
 setInterval(refreshSchedule, 20_000);
-setBusy(false);
-startSession();
+bubble('bot', "Hi! I'm the Copperline assistant. I can book a repair, tune-up or estimate, answer questions, or change an existing appointment. How can I help?");
+setReady();
+try {
+  const s = await startSession();
+  state.session = s.session;
+  els.live.textContent = 'Online';
+  els.live.className = 'pill-live on';
+} catch (err) {
+  els.live.textContent = 'Offline';
+  els.live.className = 'pill-live off';
+  bubble('err', err.message);
+}
+setReady();
