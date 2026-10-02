@@ -288,7 +288,7 @@ export function recentHandoffs(db, limit = 8) {
 
 // ---------- demo data ----------
 
-const FAKE = ['Dana Whitfield', 'Luis Ortega', 'Priya Raman', 'Tom Becker', 'Grace Kim', 'Andre Wallace', 'Molly Shaw', 'Ken Ito', 'Rosa Delgado', 'Sam Okafor'];
+const FAKE = ['Dana Whitfield', 'Luis Ortega', 'Priya Raman', 'Tom Becker', 'Grace Kim', 'Andre Wallace', 'Molly Shaw', 'Ken Ito', 'Rosa Delgado', 'Sam Sullivan'];
 
 function seededRandom(seed) {
   let s = [...seed].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
