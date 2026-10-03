@@ -2,20 +2,13 @@
 // calendar directly; every tool re-validates its input, and bookings go through the same
 // database guarantee as everything else.
 
-import Anthropic from '@anthropic-ai/sdk';
+import { chat, MODEL } from './llm.mjs';
 import { BUSINESS, SERVICES, POLICIES } from './config.mjs';
 import { availableSlots, book, findOwned, cancel, reschedule, handoff, present, nowLocal } from './db.mjs';
 
-export const MODEL = process.env.MODEL ?? 'claude-opus-5';
-const EFFORT = process.env.EFFORT ?? 'low';
+export { MODEL };
 const MAX_TOOL_ROUNDS = 5;
 
-// USD per million tokens [input, output]. Cache writes cost 1.25x input, reads 0.1x.
-const PRICES = {
-  'claude-opus-5': [5, 25], 'claude-opus-5-5': [4, 20], 'claude-sonnet-5': [2, 10], 'claude-haiku-4-5': [1, 5],
-};
-
-const client = new Anthropic({ timeout: 60_000, maxRetries: 1 });
 
 const serviceKeys = Object.keys(SERVICES);
 
@@ -47,7 +40,7 @@ const str = (description, extra = {}) => ({ type: 'string', description, ...extr
 const TOOLS = [
   {
     name: 'check_availability',
-    description: 'List open start times for a service between two dates (inclusive). Returns at most 12 slots, up to 4 per day.',
+    description: 'List open start times for a service between two dates (inclusive). Returns at most 12 slots: up to 4 per day, spread across the day. Use time_of_day when the customer asks for mornings or afternoons.',
     strict: true,
     input_schema: {
       type: 'object',
@@ -55,8 +48,9 @@ const TOOLS = [
         service: str('Service key', { enum: serviceKeys }),
         from_date: str('First date to search, YYYY-MM-DD, Austin time'),
         to_date: str('Last date to search, YYYY-MM-DD. Keep the range to 7 days or less.'),
+        time_of_day: str('morning (before noon), afternoon (noon or later) or any', { enum: ['any', 'morning', 'afternoon'] }),
       },
-      required: ['service', 'from_date', 'to_date'],
+      required: ['service', 'from_date', 'to_date', 'time_of_day'],
       additionalProperties: false,
     },
   },
@@ -135,7 +129,7 @@ const digits = (s) => String(s ?? '').replace(/\D/g, '');
 function runTool(db, name, input, session) {
   switch (name) {
     case 'check_availability': {
-      const r = availableSlots(db, input.service, input.from_date, input.to_date);
+      const r = availableSlots(db, input.service, input.from_date, input.to_date, { partOfDay: input.time_of_day ?? 'any' });
       return { result: r, event: r.error ? { ok: false, text: `Availability lookup failed: ${r.error}` } : { ok: true, text: `Checked ${SERVICES[input.service].label.toLowerCase()} availability, ${input.from_date} to ${input.to_date}: ${r.slots.length} open times` } };
     }
     case 'book_appointment': {
@@ -180,12 +174,6 @@ function runTool(db, name, input, session) {
   }
 }
 
-function costOf(usage) {
-  const [inP, outP] = PRICES[MODEL] ?? PRICES['claude-opus-5'];
-  const input = (usage.input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0) * 1.25 + (usage.cache_read_input_tokens ?? 0) * 0.1;
-  return (input * inP + (usage.output_tokens ?? 0) * outP) / 1e6;
-}
-
 export class AiUnavailable extends Error {}
 
 /**
@@ -212,20 +200,12 @@ export async function respond(db, session, userText, { beforeCall, onCost }) {
     if (blocked) { rollback(); throw new AiUnavailable(blocked); }
     let response;
     try {
-      response = await client.messages.create({
-        model: MODEL,
-        max_tokens: 2048,
-        system: SYSTEM,
-        tools: TOOLS,
-        messages: session.messages,
-        cache_control: { type: 'ephemeral' },
-        output_config: { effort: EFFORT },
-      });
+      response = await chat({ system: SYSTEM, tools: TOOLS, messages: session.messages, maxTokens: 2048 });
     } catch (err) {
       rollback(); // the customer can retry the same message
       throw err;
     }
-    const c = costOf(response.usage);
+    const c = response.cost;
     cost += c;
     onCost(c);
 

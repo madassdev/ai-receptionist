@@ -71,3 +71,12 @@ test('availability skips taken slots and respects lead time', () => {
   const after = availableSlots(db, 'tuneup', '2026-10-05', '2026-10-05', { now }).slots;
   assert.equal(after[0].start, '2026-10-05T10:30'); // the 60-minute jobs hold 09:30 and 10:00
 });
+
+test('availability spreads across the day and can show afternoons only', () => {
+  const db = fresh();
+  const all = availableSlots(db, 'tuneup', '2026-10-06', '2026-10-06', { now }).slots;
+  assert.equal(all.length, 4);
+  assert.ok(Number(all.at(-1).start.slice(11, 13)) >= 14, 'last offer is late in the day');
+  const pm = availableSlots(db, 'tuneup', '2026-10-06', '2026-10-06', { now, partOfDay: 'afternoon' }).slots;
+  assert.ok(pm.length > 0 && pm.every((s) => Number(s.start.slice(11, 13)) >= 12));
+});

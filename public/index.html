@@ -8,9 +8,9 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='9' fill='%230D9488'/><rect x='8' y='9' width='16' height='15' rx='3' fill='none' stroke='white' stroke-width='2.4'/><path d='M12 17l3 3 5-6' stroke='%23FBBF24' stroke-width='2.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="kit.css?v=7">
-<link rel="stylesheet" href="app.css?v=7">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,600&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700;6..12,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="kit.css?v=9">
+<link rel="stylesheet" href="app.css?v=9">
 </head>
 <body>
 <nav class="nav">
@@ -24,40 +24,43 @@
 </nav>
 
 <header class="hero" id="top">
-  <div class="wrap hero-grid">
-    <div>
-      <span class="eyebrow"><span class="dot"><i data-icon="sparkles"></i></span>Live demo for home-service businesses</span>
-      <h1>Never miss a <span class="mark">booking</span> again.</h1>
-      <p class="lede">This AI receptionist chats with your customers, answers their questions and books them into a real free slot in your calendar, day or night. You just show up to the job.</p>
-      <div class="hero-cta">
-        <button type="button" class="btn btn-primary" data-play><i data-icon="play"></i>Watch the 30-second example</button>
-        <a class="btn btn-line" href="#try"><i data-icon="message-circle-more"></i>Try it yourself</a>
-      </div>
-      <ul class="benefits">
-        <li><span class="tick"><i data-icon="check"></i></span>Replies in seconds, 24/7</li>
-        <li><span class="tick"><i data-icon="check"></i></span>Only offers times you're free</li>
-        <li><span class="tick"><i data-icon="check"></i></span>Can't double-book</li>
-        <li><span class="tick"><i data-icon="check"></i></span>Passes tricky cases to you</li>
-      </ul>
+  <div class="wrap hero-center">
+    <span class="eyebrow"><span class="stars">★★★★★</span>Live demo for home-service businesses</span>
+    <h1>Never miss a <em class="swash">booking<svg viewBox="0 0 300 20" preserveAspectRatio="none" aria-hidden="true"><path d="M4 14 C 80 4, 200 2, 296 12"/></svg></em> again.</h1>
+    <p class="lede">This AI receptionist chats with your customers, answers their questions and books them into a real free slot in your calendar, day or night. You just show up to the job.</p>
+    <div class="hero-cta">
+      <button type="button" class="btn btn-primary" data-play><i data-icon="play"></i>Watch the 30-second example</button>
+      <a class="btn btn-line" href="#try"><i data-icon="message-circle-more"></i>Try it yourself</a>
     </div>
+  </div>
 
-    <div class="hero-art" aria-hidden="true">
-      <div class="art-phone">
-        <div class="art-top"><span class="art-avatar"><i data-icon="bot"></i></span><b>Copperline</b><span class="art-online"></span></div>
-        <div class="art-msg me m1">My AC stopped working 😩</div>
-        <div class="art-msg bot m2">So sorry! I can send Elena on <b>Tue at 2:00 PM</b>. Shall I book it?</div>
-        <div class="art-msg me m3">Yes please!</div>
-        <div class="art-msg bot m4">Booked ✅ She'll call 20 min before.</div>
-      </div>
-      <div class="art-cal">
-        <div class="art-cal-head"><i data-icon="calendar"></i><b>Tuesday</b><span>Elena</span></div>
-        <div class="art-slot">9:00 AM<span class="busy">Tune-up</span></div>
-        <div class="art-slot">11:00 AM<span class="busy">Repair</span></div>
-        <div class="art-slot target">2:00 PM<span class="free">Free</span><span class="booked"><i data-icon="check"></i>Booked</span></div>
-        <div class="art-slot">4:00 PM<span class="busy">Estimate</span></div>
-      </div>
-      <div class="art-badge"><span><i data-icon="bell"></i></span><div><b>New booking</b><small>AC repair, Tue 2:00 PM</small></div></div>
+  <div class="wrap stage" aria-hidden="true">
+    <div class="sun"></div>
+    <div class="float f-night"><span class="f-ico night"><i data-icon="clock"></i></span><div><b>11:42 PM</b><small>Booked while you slept</small></div></div>
+    <div class="float f-fast"><span class="f-ico fast"><i data-icon="zap"></i></span><div><b>Replied in 3 sec</b><small>No hold music, no voicemail</small></div></div>
+    <div class="art-phone">
+      <div class="art-top"><span class="art-avatar"><i data-icon="bot"></i></span><div><b>Copperline</b><small>Usually replies instantly</small></div><span class="art-online"></span></div>
+      <div class="art-msg me m1">My AC stopped working 😩</div>
+      <div class="art-msg bot m2">So sorry! I can send Elena on <b>Tue at 2:00 PM</b>. Shall I book it?</div>
+      <div class="art-msg me m3">Yes please!</div>
+      <div class="art-msg bot m4">Booked ✅ She'll call 20 min before.</div>
     </div>
+    <div class="art-cal float-r">
+      <div class="art-cal-head"><i data-icon="calendar"></i><b>Tuesday</b><span>Elena</span></div>
+      <div class="art-slot">11:00 AM<span class="busy">Repair</span></div>
+      <div class="art-slot target">2:00 PM<span class="free">Free</span><span class="booked"><i data-icon="check"></i>Booked</span></div>
+      <div class="art-slot">4:00 PM<span class="busy">Estimate</span></div>
+    </div>
+    <div class="art-badge"><span><i data-icon="bell"></i></span><div><b>New booking</b><small>AC repair, Tue 2:00 PM</small></div></div>
+  </div>
+
+  <div class="wrap">
+    <ul class="benefits center">
+      <li><span class="tick"><i data-icon="check"></i></span>Replies in seconds, 24/7</li>
+      <li><span class="tick"><i data-icon="check"></i></span>Only offers times you're free</li>
+      <li><span class="tick"><i data-icon="check"></i></span>Can't double-book</li>
+      <li><span class="tick"><i data-icon="check"></i></span>Passes tricky cases to you</li>
+    </ul>
   </div>
 </header>
 
@@ -185,6 +188,6 @@
 
 <footer class="foot"><div class="wrap foot-row"><span>Demo by Frank A., AI integration engineer. Copperline Heating &amp; Air is a fictional business.</span><a href="https://github.com/madassdev/ai-receptionist" target="_blank" rel="noopener">Source code on GitHub</a></div></footer>
 
-<script src="app.js?v=7" type="module"></script>
+<script src="app.js?v=9" type="module"></script>
 </body>
 </html>

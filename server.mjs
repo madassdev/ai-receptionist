@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
-import Anthropic from '@anthropic-ai/sdk';
+import { probe, classifyError, PROVIDER } from './llm.mjs';
 import { BUSINESS, SERVICES, TECHNICIANS } from './config.mjs';
 import { openDb, seedUpcoming, purgeOld, schedule, recentHandoffs, book, nowLocal, availableSlots } from './db.mjs';
 import { respond, AiUnavailable, MODEL } from './agent.mjs';
@@ -17,17 +17,8 @@ setInterval(() => { seedUpcoming(db); purgeOld(db); }, 60 * 60_000).unref();
 
 // Is the AI provider usable? A 1-token probe at start and every 15 minutes. With no credit
 // the request is refused and costs nothing; with credit it costs a fraction of a cent.
-const aiHealth = { ok: null, checkedAt: 0 };
-const probeClient = new Anthropic({ timeout: 15_000, maxRetries: 0 });
-async function probeAi() {
-  try {
-    await probeClient.messages.create({ model: 'claude-haiku-4-5', max_tokens: 1, messages: [{ role: 'user', content: 'ok' }] });
-    aiHealth.ok = true;
-  } catch (err) {
-    aiHealth.ok = !(err instanceof Anthropic.AuthenticationError || (err instanceof Anthropic.BadRequestError && /credit balance/i.test(err.message)));
-  }
-  aiHealth.checkedAt = Date.now();
-}
+const aiHealth = { ok: null };
+async function probeAi() { aiHealth.ok = await probe(); }
 if (LIMITS.aiEnabled) { probeAi(); setInterval(probeAi, 15 * 60_000).unref(); }
 const aiStatus = () => aiBlocked(db) ?? (aiHealth.ok === false ? 'paused' : 'ok');
 
@@ -112,14 +103,15 @@ app.post('/api/chat', limiter(40, 60), async (req, res) => {
     res.json({ ...out, messagesLeft: LIMITS.messagesPerSession - session.turns, conversationCost: session.cost });
   } catch (err) {
     if (err instanceof AiUnavailable) return res.status(503).json({ error: UNAVAILABLE[err.message] ?? UNAVAILABLE.disabled });
-    if (err instanceof Anthropic.BadRequestError && /credit balance/i.test(err.message)) {
-      console.error('anthropic: out of credit');
+    const kind = classifyError(err);
+    if (kind === 'no_credit') {
+      console.error(`${PROVIDER}: key rejected or out of credit`);
       aiHealth.ok = false;
       return res.status(503).json({ error: UNAVAILABLE.no_credit, paused: true });
     }
-    if (err instanceof Anthropic.RateLimitError) return res.status(503).json({ error: 'The AI service is busy. Try again in a minute.' });
-    if (err instanceof Anthropic.APIError) {
-      console.error('anthropic error', err.status, err.message);
+    if (kind === 'busy') return res.status(503).json({ error: 'The AI service is busy. Try again in a minute.' });
+    if (kind === 'api') {
+      console.error(`${PROVIDER} error`, err.status, err.message);
       return res.status(502).json({ error: 'The AI service returned an error. Try sending that again.' });
     }
     console.error(err);
@@ -144,4 +136,4 @@ app.post('/api/race', limiter(6, 10), async (_req, res) => {
   });
 });
 
-app.listen(PORT, () => console.log(`receptionist on :${PORT} using ${MODEL}; AI ${LIMITS.aiEnabled ? 'on' : 'off'}`));
+app.listen(PORT, () => console.log(`receptionist on :${PORT} using ${PROVIDER} ${MODEL}; AI ${LIMITS.aiEnabled ? 'on' : 'off'}`));

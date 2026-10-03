@@ -1,4 +1,4 @@
-import { $, $$, esc, sleep, loadIcons, hydrateIcons, icon, toast, Guide, reveal, startSession, postJson, reducedMotion } from './kit.js?v=7';
+import { $, $$, esc, sleep, loadIcons, hydrateIcons, icon, toast, Guide, reveal, startSession, postJson, reducedMotion } from './kit.js?v=9';
 
 const state = { config: null, session: null, busy: false, playing: false, aiStatus: 'ok', myRefs: new Set(), seen: new Set(), example: null, bookings: [] };
 const els = { messages: $('#messages'), input: $('#input'), send: $('#send'), composer: $('#composer'), quick: $('#quick'), live: $('#live'), cal: $('#cal'), log: $('#log'), logCount: $('#logCount'), notice: $('#aiNotice'), spend: $('#spend') };

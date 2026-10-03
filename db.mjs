@@ -103,7 +103,12 @@ function claimedSet(db, fromUtc, toUtc) {
 }
 
 /** Open start times for a service between two local dates (inclusive). */
-export function availableSlots(db, serviceKey, fromDate, toDate, { now = nowLocal(), limit = 12 } = {}) {
+/**
+ * Open start times. Each day offers up to 4 times spread across the day (the earliest free
+ * time first), so afternoons aren't hidden behind a busy morning. `partOfDay` narrows the
+ * search to 'morning' (before noon) or 'afternoon'.
+ */
+export function availableSlots(db, serviceKey, fromDate, toDate, { now = nowLocal(), limit = 12, partOfDay = 'any' } = {}) {
   const svc = SERVICES[serviceKey];
   if (!svc) return { error: 'unknown_service' };
   let day = (fromDate ? DateTime.fromISO(fromDate, { zone }) : now).startOf('day');
@@ -111,19 +116,20 @@ export function availableSlots(db, serviceKey, fromDate, toDate, { now = nowLoca
   if (!day.isValid || !last.isValid) return { error: 'invalid_date' };
   const lastAllowed = now.startOf('day').plus({ days: BUSINESS.horizonDays });
   const claimed = claimedSet(db, day.toUTC().toISO(), last.plus({ days: 1 }).toUTC().toISO());
+  const fits = (t) => partOfDay === 'morning' ? t.hour < 12 : partOfDay === 'afternoon' ? t.hour >= 12 : true;
   const slots = [];
   for (; day <= last && day <= lastAllowed && slots.length < limit; day = day.plus({ days: 1 })) {
     const h = hoursFor(day);
     if (!h) continue;
-    let perDay = 0;
+    const free = [];
     for (let t = h.open; t.plus({ minutes: svc.minutes }) <= h.close; t = t.plus({ minutes: BUSINESS.slotMinutes })) {
-      if (rejectStart(t, serviceKey, now)) continue;
+      if (!fits(t) || rejectStart(t, serviceKey, now)) continue;
       const need = blocks(t, svc.minutes);
       const tech = TECHNICIANS.find((tc) => need.every((b) => !claimed.has(`${tc.id}|${b}`)));
-      if (!tech) continue;
-      slots.push({ start: t.toFormat("yyyy-LL-dd'T'HH:mm"), label: t.toFormat('cccc d LLL, h:mm a'), technician: tech.name });
-      if (++perDay >= 4 || slots.length >= limit) break;
+      if (tech) free.push({ start: t.toFormat("yyyy-LL-dd'T'HH:mm"), label: t.toFormat('cccc d LLL, h:mm a'), technician: tech.name });
     }
+    const picks = free.length <= 4 ? free : [0, 1, 2, 3].map((i) => free[Math.round((i * (free.length - 1)) / 3)]);
+    for (const p of picks) { if (slots.length >= limit) break; slots.push(p); }
   }
   return { service: svc.label, duration_minutes: svc.minutes, slots };
 }
