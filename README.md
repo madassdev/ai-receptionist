@@ -2,7 +2,7 @@
 
 **Live demo:** https://reception.frankonline.cloud
 
-A website chat assistant for a (fictional) heating and air company in Austin. Customers ask questions, find open times, book, reschedule and cancel. The business sees its technicians' calendar update live. The AI is Claude with six tools; the booking rules live in code and in the database, not in the prompt.
+A website chat assistant for a (fictional) heating and air company in Austin. Customers ask questions, find open times, book, reschedule and cancel. The business sees its technicians' calendar update live. The AI is an LLM (OpenAI or Claude) with six tools; the booking rules live in code and in the database, not in the prompt.
 
 ![Demo](docs/screenshot.png)
 
@@ -21,12 +21,13 @@ A website chat assistant for a (fictional) heating and air company in Austin. Cu
 
 ## Stack
 
-Node 24 · Express 5 · built-in `node:sqlite` (WAL) · Luxon for time zones · Anthropic SDK (Claude, strict tool use) · plain HTML/CSS/JS front end · Docker + Caddy.
+Node 24 · Express 5 · built-in `node:sqlite` (WAL) · Luxon for time zones · OpenAI or Anthropic SDK through `llm.mjs` (strict tool use) · plain HTML/CSS/JS front end · Docker + Caddy.
 
 ```
 config.mjs   business facts: services, hours, service area, policies
 db.mjs       booking engine: availability, book, reschedule, cancel, handoff, demo seed data
-agent.mjs    Claude tool loop, tool schemas, input validation, cost tracking
+agent.mjs    tool loop, tool schemas, input validation, cost tracking
+llm.mjs      provider adapter: Claude-style messages in, OpenAI or Anthropic out
 guard.mjs    proof-of-work, session limits, daily budget, kill switch
 server.mjs   HTTP API: /api/config, /api/schedule, /api/challenge, /api/session, /api/chat, /api/race
 public/      the demo page (chat widget + live technician calendar)
@@ -37,12 +38,12 @@ test/        booking engine tests (node --test)
 
 ```bash
 npm install
-cp .env.example .env   # add ANTHROPIC_API_KEY
+cp .env.example .env   # add OPENAI_API_KEY (or ANTHROPIC_API_KEY with PROVIDER=anthropic)
 node --env-file=.env server.mjs   # http://localhost:5190
 npm test
 ```
 
-Environment: `ANTHROPIC_API_KEY`, `MODEL` (default `claude-opus-5`; `claude-haiku-4-5` is ~5x cheaper), `EFFORT` (default `low`), `GUARD_SECRET`, `DAILY_BUDGET_USD` (1.50), `DAILY_AI_CALLS` (400), `MESSAGES_PER_SESSION` (14), `SESSIONS_PER_IP_PER_HOUR` (6), `POW_BITS` (17), `AI_ENABLED`.
+Environment: `PROVIDER` (`openai` or `anthropic`), `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`, `MODEL` (default `gpt-4.1-mini` on OpenAI, `claude-opus-5` on Anthropic), `EFFORT` (Anthropic only, default `low`), `GUARD_SECRET`, `DAILY_BUDGET_USD` (1.50), `DAILY_AI_CALLS` (400), `MESSAGES_PER_SESSION` (14), `SESSIONS_PER_IP_PER_HOUR` (6), `POW_BITS` (17), `AI_ENABLED`.
 
 ## Adapting it for a real business
 
